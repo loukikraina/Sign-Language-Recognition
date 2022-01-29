@@ -50,7 +50,7 @@ while True:
     probabilityVal = np.amax(prediction)
     
     if probabilityVal>threshold:
-        cv2.putText(imgOriginal, predicted_letter, (120,35), font, 0.75, (0,0,255), 2, cv2.LINE_AA)
+        cv2.putText(imgOriginal, predicted_letter, (150,35), font, 0.75, (0,0,255), 2, cv2.LINE_AA)
         cv2.putText(imgOriginal, str(round(probabilityVal*100,2))+"%", (180,75), font, 0.75, (255,0,255), 2, cv2.LINE_AA)
     cv2.imshow("Result", imgOriginal)
     cv2.imshow("Cropped_img", crop_img)
