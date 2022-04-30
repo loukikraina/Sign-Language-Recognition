@@ -9,9 +9,9 @@ from PyQt5.QtCore import *
 import cv2
 
 
-threshold = 0.90
+threshold = 0.70
 font = cv2.FONT_HERSHEY_COMPLEX
-model = load_model('asl_model')
+model = load_model('keras_model.h5')
 
 alphabet = "abcdefghiklmnopqrstuvwxy"
 dictionary = {}
@@ -20,8 +20,8 @@ for i in range(24):
 
 def preprocessing(img):
         img = img.astype("uint8")
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        img = cv2.equalizeHist(img)
+        # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        # img = cv2.equalizeHist(img)
         img = img/255
         return img
 
@@ -227,16 +227,16 @@ class Worker1(QThread):
                 cv2.putText(FlippedImage, "Probability", (20,75), font, 0.75, (255,0,255), 2, cv2.LINE_AA)
                 cv2.rectangle(img, (400, 100), (600,300), (50,50,255), 2)
                 crop_img = img[100:300, 400:600]
-                img = cv2.resize(crop_img, (28,28))
+                img = cv2.resize(crop_img, (224,224))
                 img = preprocessing(img)
-                img = img.reshape(1, 28, 28, 1)
+                img = img.reshape(1, 224, 224, 3)
                 prediction = model.predict(img)
                 predicted_letter = dictionary[np.argmax(prediction)]
                 probabilityVal = np.amax(prediction)
                 
-                if probabilityVal>threshold:
-                    cv2.putText(FlippedImage, predicted_letter, (150,35), font, 0.75, (0,0,255), 2, cv2.LINE_AA)
-                    cv2.putText(FlippedImage, str(round(probabilityVal*100,2))+"%", (180,75), font, 0.75, (255,0,255), 2, cv2.LINE_AA)
+                # if probabilityVal>threshold:
+                cv2.putText(FlippedImage, predicted_letter, (150,35), font, 0.75, (0,0,255), 2, cv2.LINE_AA)
+                cv2.putText(FlippedImage, str(round(probabilityVal*100,2))+"%", (180,75), font, 0.75, (255,0,255), 2, cv2.LINE_AA)
         
                 
                 Image = cv2.cvtColor(FlippedImage,cv2.COLOR_BGR2RGB)

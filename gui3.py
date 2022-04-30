@@ -1,5 +1,7 @@
+from re import L
+import re
 import warnings
-# import sys 
+# import sys
 warnings.filterwarnings('ignore')
 
 
@@ -17,6 +19,8 @@ threshold = 0.90
 font = cv2.FONT_HERSHEY_COMPLEX
 model = load_model('asl_model')
 predictDict={}
+current_alp='a'
+
 
 predictSentence=""
 alphabet = "abcdefghiklmnopqrstuvwxy"
@@ -30,6 +34,13 @@ def resetDict():
         predictDict[i]=0
 
 resetDict()
+
+overlayList=[]
+for i in alphabet:
+    alpha=i.upper()
+    image=cv2.imread(f'./data/asl_images/{alpha}.jpg')
+    overlayList.append(image)
+
 def preprocessing(img):
         img = img.astype("uint8")
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -74,28 +85,28 @@ class Button(QPushButton):
 class StackedExample(QWidget):
     def __init__(self):
         super(StackedExample, self).__init__()
-        
+
         # self.leftlist = QListWidget()
         # self.leftlist.insertItem (0, 'HOME' )
         # self.leftlist.insertItem (1, 'Recognise' )
         # self.leftlist.insertItem (2, 'Keyboard' )
-            
+
         self.stack1 = QWidget()
         self.stack2 = QWidget()
         self.stack3 = QWidget()
         self.stack4 = QWidget()
-            
+
         self.stack1UI()
         self.stack2UI()
         self.stack3UI()
         self.stack4UI()
-            
+
         self.Stack = QStackedWidget (self)
-        self.Stack.addWidget (self.stack1)        
+        self.Stack.addWidget (self.stack1)
         self.Stack.addWidget (self.stack2)
         self.Stack.addWidget (self.stack3)
         self.Stack.addWidget (self.stack4)
-            
+
         hbox = QHBoxLayout(self)
         # hbox.addWidget(self.leftlist)
         hbox.addWidget(self.Stack)
@@ -105,11 +116,31 @@ class StackedExample(QWidget):
         # self.setGeometry(300, 50, 10,10)
         self.setWindowTitle("Sign Language Recogniser")
         self.show()
-            
+
+
+
+    def keyPressEvent(self, event):
+        # if event.key() == QtCore.Qt.Key_Q:
+        #     print ("Killing")
+        #     self.deleteLater()
+        # elif event.key() == QtCore.Qt.Key_Enter:
+        #     self.proceed()
+        # event.accept()
+        backspace = 16777219
+        if event.key() == backspace:
+            global predictSentence
+            predictSentence = predictSentence[:-1]
+
+        alp = chr(event.key())
+        if event.key() in range(65,  65+26):
+            print(event.key(), alp)
+            global current_alp
+            current_alp = alp.lower()
+
     def stack1UI(self):
         self.VBL=QVBoxLayout()
         self.BTN1 = Button("Learn")
-        
+
         self.BTN1.clicked.connect(self.StartFeed1)
         self.VBL.addWidget(self.BTN1)
 
@@ -121,40 +152,40 @@ class StackedExample(QWidget):
         self.BTN3.clicked.connect(self.StartFeed3)
         self.VBL.addWidget(self.BTN3)
         self.stack1.setLayout(self.VBL)
-        
+
     def stack2UI(self):
-        self.VBL=QVBoxLayout()    
+        self.VBL=QVBoxLayout()
         self.setFixedWidth(650)
         self.setFixedHeight(600)
 
         self.title=QLabel()
         self.title.setText("LEARN")
         self.title.setAlignment(Qt.AlignCenter)
-  
+
         self.VBL.addWidget(self.title)
-        
+
         self.FeedLabel1 = QLabel()
         self.VBL.addWidget(self.FeedLabel1)
-        
+
         self.CancelBTN = Button("Back")
         self.CancelBTN.clicked.connect(self.CancelFeed)
         self.VBL.addWidget(self.CancelBTN)
 
         self.Worker1 = Worker1()
-            
+
         self.stack2.setLayout(self.VBL)
 
     def stack3UI(self):
-        self.VBL=QVBoxLayout()    
+        self.VBL=QVBoxLayout()
         self.setFixedWidth(650)
         self.setFixedHeight(600)
 
         self.title=QLabel()
         self.title.setText("RECOGNISE")
         self.title.setAlignment(Qt.AlignCenter)
-  
+
         self.VBL.addWidget(self.title)
-        
+
         self.FeedLabel2 = QLabel()
         self.VBL.addWidget(self.FeedLabel2)
 
@@ -162,30 +193,30 @@ class StackedExample(QWidget):
         self.CancelBTN.clicked.connect(self.CancelFeed)
         self.VBL.addWidget(self.CancelBTN)
 
-        self.Worker2 = Worker1()
-            
+        self.Worker2 = Worker2()
+
         self.stack3.setLayout(self.VBL)
 
     def stack4UI(self):
-        self.VBL=QVBoxLayout()    
+        self.VBL=QVBoxLayout()
         self.setFixedWidth(650)
         self.setFixedHeight(600)
 
         self.title=QLabel()
         self.title.setText("KEYBOARD")
         self.title.setAlignment(Qt.AlignCenter)
-  
+
         self.VBL.addWidget(self.title)
-        
+
         self.FeedLabel3 = QLabel()
         self.VBL.addWidget(self.FeedLabel3)
-        
+
         self.CancelBTN = Button("Back")
         self.CancelBTN.clicked.connect(self.CancelFeed)
         self.VBL.addWidget(self.CancelBTN)
 
-        self.Worker3 = Worker1()
-            
+        self.Worker3 = Worker3()
+
         self.stack4.setLayout(self.VBL)
 
 
@@ -196,9 +227,9 @@ class StackedExample(QWidget):
         self.FeedLabel2.setPixmap(QPixmap.fromImage(Image))
 
     def ImageUpdateSlot3(self,Image):
-        self.FeedLabel3.setPixmap(QPixmap.fromImage(Image))    
+        self.FeedLabel3.setPixmap(QPixmap.fromImage(Image))
 
-    def StartFeed1(self):    
+    def StartFeed1(self):
         self.Stack.setCurrentIndex(1)
         self.Worker1.start()
         self.Worker1.ImageUpdate.connect(self.ImageUpdateSlot1)
@@ -225,8 +256,97 @@ class StackedExample(QWidget):
     #     print("this:",event.text())
 
 
-        
+
 class Worker1(QThread):
+    ImageUpdate = pyqtSignal(QImage)
+    def run(self):
+        self.ThreadActive=True
+        Capture = cv2.VideoCapture(0)
+        while self.ThreadActive:
+
+            # if keyboard.read_key() == 'backspace':
+            #     print("You pressed "+keyboard.read_key())
+
+            ret,imgOriginal = Capture.read()
+
+            if ret:
+                global current_alp
+                FlippedImage = cv2.flip(imgOriginal,1)
+                img = np.asarray(FlippedImage)
+                cv2.putText(FlippedImage, "Alphabet", (20,35), font, 0.75, (0,0,255), 2, cv2.LINE_AA)
+                cv2.putText(FlippedImage, "Probability", (20,75), font, 0.75, (255,0,255), 2, cv2.LINE_AA)
+
+                cv2.rectangle(img, (400, 100), (600,300), (50,50,255), 2)
+                crop_img = img[100:300, 400:600]
+                img = cv2.resize(crop_img, (28,28))
+                img = preprocessing(img)
+                img = img.reshape(1, 28, 28, 1)
+                prediction = model.predict(img)
+                predicted_letter = dictionary[np.argmax(prediction)]
+                probabilityVal = np.amax(prediction)
+
+                if probabilityVal>threshold:
+                    cv2.putText(FlippedImage, predicted_letter, (150,35), font, 0.75, (0,0,255), 2, cv2.LINE_AA)
+                    cv2.putText(FlippedImage, str(round(probabilityVal*100,2))+"%", (180,75), font, 0.75, (255,0,255), 2, cv2.LINE_AA)
+
+
+                res1 = alphabet.find(current_alp)
+                if res1==-1:
+                    res1=0
+                h,w,c=overlayList[res1].shape
+                # cv2.resize(overlayList[res1], (h*2, w*2))
+                FlippedImage[480-h:480,0:w]=overlayList[res1]
+                
+                if predicted_letter==current_alp:
+                    cv2.putText(FlippedImage, "Correct", (160,425), font, 0.75, (0,255,100), 2, cv2.LINE_AA)
+
+                Image = cv2.cvtColor(FlippedImage,cv2.COLOR_BGR2RGB)
+                ConvertToQtFormat = QImage(Image.data,Image.shape[1],Image.shape[0],QImage.Format_RGB888)
+                Pic = ConvertToQtFormat.scaled(640,480,Qt.KeepAspectRatio)
+                self.ImageUpdate.emit(Pic)
+
+    def stop(self):
+        self.ThreadActive = False
+        self.quit()
+
+class Worker2(QThread):
+    ImageUpdate = pyqtSignal(QImage)
+    def run(self):
+        self.ThreadActive=True
+        Capture = cv2.VideoCapture(0)
+        while self.ThreadActive:
+            ret,imgOriginal = Capture.read()
+
+            if ret:
+
+                FlippedImage = cv2.flip(imgOriginal,1)
+                img = np.asarray(FlippedImage)
+                cv2.putText(FlippedImage, "Alphabet", (20,35), font, 0.75, (0,0,255), 2, cv2.LINE_AA)
+                cv2.putText(FlippedImage, "Probability", (20,75), font, 0.75, (255,0,255), 2, cv2.LINE_AA)
+
+                cv2.rectangle(img, (400, 100), (600,300), (50,50,255), 2)
+                crop_img = img[100:300, 400:600]
+                img = cv2.resize(crop_img, (28,28))
+                img = preprocessing(img)
+                img = img.reshape(1, 28, 28, 1)
+                prediction = model.predict(img)
+                predicted_letter = dictionary[np.argmax(prediction)]
+                probabilityVal = np.amax(prediction)
+
+                if probabilityVal>threshold:
+                    cv2.putText(FlippedImage, predicted_letter, (150,35), font, 0.75, (0,0,255), 2, cv2.LINE_AA)
+                    cv2.putText(FlippedImage, str(round(probabilityVal*100,2))+"%", (180,75), font, 0.75, (255,0,255), 2, cv2.LINE_AA)
+
+                Image = cv2.cvtColor(FlippedImage,cv2.COLOR_BGR2RGB)
+                ConvertToQtFormat = QImage(Image.data,Image.shape[1],Image.shape[0],QImage.Format_RGB888)
+                Pic = ConvertToQtFormat.scaled(640,480,Qt.KeepAspectRatio)
+                self.ImageUpdate.emit(Pic)
+
+    def stop(self):
+        self.ThreadActive = False
+        self.quit()
+
+class Worker3(QThread):
     ImageUpdate = pyqtSignal(QImage)
     def run(self):
         self.ThreadActive=True
@@ -238,14 +358,14 @@ class Worker1(QThread):
             ret,imgOriginal = Capture.read()
 
             if ret:
-                
+
                 # Image = cv2.cvtColor(imgOriginal,cv2.COLOR_BGR2RGB)
                 FlippedImage = cv2.flip(imgOriginal,1)
-                # FlippedImage=imgOriginal                
+                # FlippedImage=imgOriginal
                 img = np.asarray(FlippedImage)
                 cv2.putText(FlippedImage, "Alphabet", (20,35), font, 0.75, (0,0,255), 2, cv2.LINE_AA)
                 cv2.putText(FlippedImage, "Probability", (20,75), font, 0.75, (255,0,255), 2, cv2.LINE_AA)
-                
+
                 cv2.rectangle(img, (400, 100), (600,300), (50,50,255), 2)
                 crop_img = img[100:300, 400:600]
                 img = cv2.resize(crop_img, (28,28))
@@ -254,10 +374,10 @@ class Worker1(QThread):
                 prediction = model.predict(img)
                 predicted_letter = dictionary[np.argmax(prediction)]
                 probabilityVal = np.amax(prediction)
-                
+
                 if probabilityVal>threshold:
                     cv2.putText(FlippedImage, predicted_letter, (150,35), font, 0.75, (0,0,255), 2, cv2.LINE_AA)
-                    cv2.putText(FlippedImage, str(round(probabilityVal*100,2))+"%", (180,75), font, 0.75, (255,0,255), 2, cv2.LINE_AA)                
+                    cv2.putText(FlippedImage, str(round(probabilityVal*100,2))+"%", (180,75), font, 0.75, (255,0,255), 2, cv2.LINE_AA)
                     predictDict[predicted_letter]+=1
                     if predictDict[predicted_letter]>10:
                         print(predicted_letter)
@@ -265,8 +385,8 @@ class Worker1(QThread):
                         predictSentence += predicted_letter
                         resetDict()
                 cv2.putText(FlippedImage, "Sentence: "+predictSentence, (20,425), font, 0.75, (0,0,255), 2, cv2.LINE_AA)
-        
-                
+
+
                 Image = cv2.cvtColor(FlippedImage,cv2.COLOR_BGR2RGB)
                 ConvertToQtFormat = QImage(Image.data,Image.shape[1],Image.shape[0],QImage.Format_RGB888)
                 Pic = ConvertToQtFormat.scaled(640,480,Qt.KeepAspectRatio)
@@ -276,8 +396,8 @@ class Worker1(QThread):
         self.ThreadActive = False
         self.quit()
 
-   
-	
+
+
 if __name__ == "__main__":
    app = QApplication(sys.argv)
    ex = StackedExample()
@@ -293,14 +413,13 @@ if __name__ == "__main__":
     font: bold 20px;
     border-width: 35px;
     border-radius: 35px;
-    
+
 }
 QPushButton:hover {
     background-color: lightgreen;
     border-color: lightgreen;
 }"""
     )
-   
-   sys.exit(app.exec()) 
-   
-    
+
+   sys.exit(app.exec())
+
